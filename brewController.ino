@@ -10,18 +10,23 @@
 #include <MenuBackend.h>
 
 const char VERSION[6] ="0.1";
-const byte HLT_TEM_ADDR addr[8] = {0x28, 0xE8, 0xE9, 0x18, 0x04, 0x00, 0x00, 0x05};
 
+// This defines the addresses of the 2Wire devices in use so we can identify them
+#define NUM_PROBES 2
+const byte PROBE[NUM_PROBES][8] = {{0x28, 0xE8, 0xE9, 0x18, 0x04, 0x00, 0x00, 0x05},{0x28, 0x1A, 0xCE, 0x0C, 0x04, 0x00, 0x00, 0x86}};
+const bool parasitic_mode = false; // Define if we are using parasitic power or not
 
 Adafruit_RGBLCDShield lcd;
 // RGB Shield needs 5 wires
 // VSS and VDD
 // i2c clock and data connect to A4 and A5 on Arduino
 // i2c interrupt connects to digital pin 3 on arduino
-OneWire  ds(7);  // on pin 10
+
+//Arduino pins
+OneWire  ds(7);  // on pin 7
 
 
-volatile boolean buttonPress=false;
+volatile boolean buttonPress=false;  
 boolean liquor_preheat = false;
 float HLT_temp, HERMS_out_temp, mash_temp; // in C as this is default for DS1820
 
@@ -198,9 +203,28 @@ void toggle_preheat_liquor()
   }
 }
 
+// Function to test the address against the PROBE array to identify which one we are talking to
+// Requires PROBE to be a 2Dimensional byte Array 1st Dimension has NUM_PROBES entries (<254), 2nd dimension is 8
+// addr needs to be a byte array of length 8
+// Return value is 255 if the address couldn't be found or the index of the 1st Dimension.
+
+unsigned char identifyProbe (byte * addr)
+{
+  byte i,probe;
+  byte found_probe = 255;
+  
+  for (probe=0; probe < NUM_PROBES & found_probe==255; probe++) {
+    for( i = 0; i < 8; i++) {
+      if (addr[i] != PROBE[probe][i])  {break;} // It's not this probe so bail
+      if (i==7) {found_probe = probe;} // If we got this far then we have a match
+    }
+  }
+    return found_probe;
+}
+
 void updateTemperatures()
 {
-    byte i;
+    byte probe;
   byte present = 0;
   byte data[12];
   byte addr[8];
@@ -208,63 +232,68 @@ void updateTemperatures()
   
   while ( ds.search(addr)) {
     
-    Serial.print("ROM =");
-    for( i = 0; i < 8; i++) {
-      Serial.write(' ');
-      Serial.print(addr[i], HEX);
+    if (OneWire::crc8(addr, 7) == addr[7]) {
+      probe = identifyProbe(addr);
+      
+      Serial.print("Probe:"); Serial.print(probe); Serial.print(" ");
+    
+      ds.reset();
+      ds.select(addr);
+      ds.write(0x44,1);  // Issue the convert command
+      
+      if (parasitic_mode) {
+        delay(1000);     // maybe 750ms is enough, maybe not
+      } else
+      {
+        while (ds.read() == 0) {  } // Poll for completion
+      }
+      
+      // we might do a ds.depower() here, but the reset will take care of it.
+      
+      present = ds.reset();
+      ds.select(addr);    
+      ds.write(0xBE);         // Read Scratchpad
+    
+       for ( i = 0; i < 9; i++) {           // we need 9 bytes
+        data[i] = ds.read();
+      }
+  
+    // Verify the CRC matches and that the data isn't corrupt     
+      if (OneWire::crc8(data, 8) == data[8]) {
+        // convert the data to actual temperature
+        unsigned int raw = (data[1] << 8) | data[0];
+      
+        byte cfg = (data[4] & 0x60);
+        if (cfg == 0x00) raw = raw << 3;  // 9 bit resolution, 93.75 ms
+        else if (cfg == 0x20) raw = raw << 2; // 10 bit res, 187.5 ms
+        else if (cfg == 0x40) raw = raw << 1; // 11 bit res, 375 ms
+        // default is 12 bit resolution, 750 ms conversion time
+      
+        celsius = (float)raw / 16.0;
+        Serial.print("  Temperature = ");
+        Serial.print(celsius);
+        Serial.println(" Celsius, ");
+        
+        switch(probe) {
+          case 0:
+            HLT_temp = celsius; break;
+          case 1: 
+            HERMS_out_temp = celsius; break;
+          case 2: 
+            mash_temp = celsius; break;
+        }
+        
+      } else {
+       Serial.println("CRC mismatch - ignoring reading");
+      }
+    } else
+    {
+      Serial.println("CRC mismatch - ignoring reading");
     }
-  
-    if (OneWire::crc8(addr, 7) != addr[7]) {
-        Serial.println("CRC is not valid!");
-        return;
-    }
-    Serial.println();
-   
-  
-    ds.reset();
-    ds.select(addr);
-    ds.write(0x44,1);         // start conversion, with parasite power on at the end
-    
-    delay(1000);     // maybe 750ms is enough, maybe not
-    // we might do a ds.depower() here, but the reset will take care of it.
-    
-    present = ds.reset();
-    ds.select(addr);    
-    ds.write(0xBE);         // Read Scratchpad
-  
-    Serial.print("  Data = ");
-    Serial.print(present,HEX);
-    Serial.print(" ");
-    for ( i = 0; i < 9; i++) {           // we need 9 bytes
-      data[i] = ds.read();
-      Serial.print(data[i], HEX);
-      Serial.print(" ");
-    }
-    //Serial.print(" CRC=");
-    //Serial.print(OneWire::crc8(data, 8), HEX);
-    //Serial.println();
-    byte calculated_crc = OneWire::crc8(data, 8);
-    
-    if (calculated_crc == data[9]) {
-     Serial.print("CRC match");
-    }
-    
-    // convert the data to actual temperature
-    unsigned int raw = (data[1] << 8) | data[0];
-  
-    byte cfg = (data[4] & 0x60);
-    if (cfg == 0x00) raw = raw << 3;  // 9 bit resolution, 93.75 ms
-    else if (cfg == 0x20) raw = raw << 2; // 10 bit res, 187.5 ms
-    else if (cfg == 0x40) raw = raw << 1; // 11 bit res, 375 ms
-    // default is 12 bit resolution, 750 ms conversion time
-  
-    celsius = (float)raw / 16.0;
-    Serial.print("  Temperature = ");
-    Serial.print(celsius);
-    Serial.print(" Celsius, ");
-    
   }
   
   ds.reset_search();
 
 }
+
+
