@@ -31,25 +31,24 @@ boolean liquor_preheat = false;
 float HLT_temp, HERMS_out_temp, mash_temp; // in C as this is default for DS1820
 
 //this controls the menu backend and the event generation
-MenuBackend menu = MenuBackend(menuUseEvent,menuChangeEvent);
-  MenuItem root = MenuItem("Root");
-  MenuItem preheat_liquor = MenuItem("Preheat");
-  MenuItem mash = MenuItem("Mash");
-  MenuItem settings = MenuItem("Settings");
+MenuBackend menu = MenuBackend(menuEventUse,menuEventChange);
+MenuItem root = MenuItem("Root");
+MenuItem preheat_liquor = MenuItem("Preheat");
+MenuItem mash = MenuItem("Mash");
+MenuItem settings = MenuItem("Settings");
 
-	
-//this function builds the menu and connects the correct items together
 void menuSetup()
 {
   Serial.println("Setting up menu...");
 
   menu.getRoot().add(root); 
   root.addRight(preheat_liquor);
-  root.addLeft(settings);
+  //root.addLeft(settings);
   preheat_liquor.addRight(mash);
-  preheat_liquor.addLeft(root);
+  //preheat_liquor.addLeft(root);
   mash.addRight(settings);
-  mash.addLeft(preheat_liquor);
+  //mash.addLeft(preheat_liquor);
+  settings.addRight(root);
 }
 
 /*
@@ -58,10 +57,10 @@ void menuSetup()
 	
 	This is where you define a behaviour for a menu item
 */
-void menuUseEvent(MenuUseEvent used)
+void menuEventUse(MenuUseEvent used)
 {
-  Serial.print("Menu use ");
-  Serial.println(used.item.getName());
+ // Serial.print("Menu use ");
+ // Serial.println(used.item.getName());
   
   if (used.item == preheat_liquor) {
     toggle_preheat_liquor();
@@ -73,7 +72,7 @@ void menuUseEvent(MenuUseEvent used)
 	Here we get a notification whenever the user changes the menu
 	That is, when the menu is navigated
 */
-void menuChangeEvent(MenuChangeEvent changed)
+void menuEventChange(MenuChangeEvent changed)
 {
 	Serial.print("Menu change ");
 	Serial.print(changed.from.getName());
@@ -84,10 +83,11 @@ void menuChangeEvent(MenuChangeEvent changed)
 
 
 void Button_Pressed() {
-// Keep this as short as possible - because you are holding up the proc  
-  
+  // Keep this as short as possible - because you are holding up the proc
+  // So we will handle this by just marking that an interrupt has happened,
+  // The rest of the code will need to monitor for this and abort long running 
+  // processes if they find out there is an interrupt.
   buttonPress=true;
-
 }
 
 void setup() {
@@ -129,9 +129,7 @@ void loop() {
   
   if (buttonPress) {
     uint8_t buttons = lcd.readButtons();
-   
-    //Serial.println("INTERRUPT");
-   
+    
     if (buttons & BUTTON_UP) { up_pressed(); }
     if (buttons & BUTTON_DOWN) { down_pressed(); }
     if (buttons & BUTTON_RIGHT) { right_pressed(); }
@@ -165,11 +163,11 @@ void right_pressed() {
 }
 void up_pressed() {
   Serial.println("Up"); 
-  //menu.moveUp();
+  menu.moveUp();
 }
 void down_pressed() {
   Serial.println("Down"); 
-  //menu.moveDown();
+  menu.moveDown();
 }
 void enter_pressed() {
   Serial.println("Enter"); 
@@ -182,12 +180,14 @@ void update_display()
 
 void lcdtopRow( const char message[20])
 {
+  lcd.clear();
   lcd.setCursor(0,0);
   lcd.print(message);
 }
 
 void lcdBottomRow( const char message[20] )
 {
+  lcd.clear();
   lcd.setCursor(0,1);
   lcd.print(message);
 }
@@ -196,11 +196,11 @@ void toggle_preheat_liquor()
 {
   liquor_preheat = !liquor_preheat;
   
-  if (liquor_preheat) {
-    lcdBottomRow("ON");
-  } else {
-    lcdBottomRow("OFF");
-  }
+//  if (liquor_preheat) {
+//    lcdBottomRow("ON");
+//  } else {
+//    lcdBottomRow("OFF");
+//  }
 }
 
 // Function to test the address against the PROBE array to identify which one we are talking to
@@ -244,8 +244,15 @@ void updateTemperatures()
       if (parasitic_mode) {
         delay(1000);     // maybe 750ms is enough, maybe not
       } else
-      {
-        while (ds.read() == 0) {  } // Poll for completion
+      { // Poll for completion
+        while (ds.read() == 0) { 
+          if (buttonPress)
+          {
+            // An interrupt has occurred, so abort and bail
+            ds.reset_search();
+            return;
+          }
+        } 
       }
       
       // we might do a ds.depower() here, but the reset will take care of it.
