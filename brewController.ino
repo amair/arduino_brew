@@ -32,7 +32,9 @@ volatile boolean buttonPress=false;// Indicates if we have received an
                                    // Interupt to tell us a button needs read
 boolean liquor_preheat = false; // Are we in preheat mode for the HLT
 boolean herms_recirc = false; // Are we running the HERMS recirculation
-float HLT_temp, HERMS_out_temp, mash_temp; // in Celsius as this is default for DS1820
+float HLT_temp; 
+float HERMS_out_temp;
+float mash_temp; // in Celsius as this is default for DS1820
 
 float Strike_temp=80.0; //Target temperature for HLT water
 float Mash_target=65.5; // Target mash temp inside mash tun
@@ -67,7 +69,7 @@ void menuEventUse(MenuUseEvent used)
   if (used.item == preheat_liquor) {
     toggle_preheat_liquor();
   }
-})
+}
 
 // Called whenever the menu changes
 void menuEventChange(MenuChangeEvent changed)
@@ -81,9 +83,9 @@ void menuEventChange(MenuChangeEvent changed)
 
     if (changed.to==preheat_liquor)
     {
-        display_temp_menu(HLT_temp,Strike_temp)
+        display_temp_menu(HLT_temp,Strike_temp);
     } else if (changed.to==mash) {
-        display_temp_menu(HERMS_out_temp, Mash_target)
+        display_temp_menu(HERMS_out_temp, Mash_target);
     }
 }
 
@@ -169,7 +171,7 @@ void loop() {
       updateTemperatures();
 
       if (liquor_preheat) {
-        cycle_HLT()
+        cycle_HLT();
       }
   }
 
@@ -181,7 +183,7 @@ void startBrewConroller()
   lcd.clear();
   lcdtopRow("Brew Controller");
   lcdBottomRow(VERSION);
-  sleep(1200);
+  delay(1200);
   lcdtopRow(menu.getRoot().getName());
 }
 
@@ -344,34 +346,33 @@ void updateTemperatures()
 
 void cycle_HLT()
 {
-    if (HLT_Heater_ON && HLT_temp>=Strike_temp) {
+    if (HLT_heater_ON && HLT_temp>=Strike_temp) {
         toggle_HLT_Heater();
-    } else if (!HLT_Heater_ON && Strike_temp>HLT_temp) {
+    } else if (!HLT_heater_ON && Strike_temp>HLT_temp) {
         toggle_HLT_Heater();
     }
 
 }
 
-HERMS_out_temp Mash_target
 void cycle_HERMS()
 {
-    if (HERMS_Heater_ON && HERMS_out_temp>=Mash_target)
+    if (HERMS_heater_ON && HERMS_out_temp>=Mash_target)
     {
         toggle_HERMS_Heater();
-    } else if (!HERMS_Heater_ON && Mash_target>HERMS_out_temp) {
+    } else if (!HERMS_heater_ON && Mash_target>HERMS_out_temp) {
         toggle_HERMS_Heater();
     }
-})
+}
 
 void toggle_HLT_Heater()
 {
-    HLT_Heater_ON = ! HLT_Heater_ON;
-    digitalWrite(HLT_HEATER_1, HLT_Heater_ON);
-    digitalWrite(HLT_HEATER_2, HLT_Heater_ON);
+    HLT_heater_ON = ! HLT_heater_ON;
+    digitalWrite(HLT_HEATER_1, HLT_heater_ON);
+    digitalWrite(HLT_HEATER_2, HLT_heater_ON);
 }
 
 void toggle_HERMS_Heater()
 {
-    HERMS_Heater_ON = ! HERMS_Heater_ON;
-    digitalWrite(HERMS_HEATER,HERMS_Heater_ON);
+    HERMS_heater_ON = ! HERMS_heater_ON;
+    digitalWrite(HERMS_HEATER,HERMS_heater_ON);
 }
