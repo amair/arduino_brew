@@ -23,12 +23,22 @@ Adafruit_RGBLCDShield lcd;
 // i2c interrupt connects to digital pin 3 on arduino
 
 //Arduino pins
-OneWire  ds(7);  // on pin 7
+OneWire  ds(7);  // One wire thermometers on pin 7
+const uint8_t HLT_HEATER_1=13; // Heater coil 1 in HLT
+const uint8_t HLT_HEATER_2=12; // Heater coil 2 in HLT
+const uint8_t HERMS_HEATER=11; // Heater coil in HERMS recirculator
 
+volatile boolean buttonPress=false;// Indicates if we have received an
+                                   // Interupt to tell us a button needs read
+boolean liquor_preheat = false; // Are we in preheat mode for the HLT
+boolean herms_recirc = false; // Are we running the HERMS recirculation
+float HLT_temp, HERMS_out_temp, mash_temp; // in Celsius as this is default for DS1820
 
-volatile boolean buttonPress=false;  
-boolean liquor_preheat = false;
-float HLT_temp, HERMS_out_temp, mash_temp; // in C as this is default for DS1820
+float Strike_temp=80.0; //Target temperature for HLT water
+float Mash_target=65.5; // Target mash temp inside mash tun
+
+boolean HLT_heater_ON=false; //True when the HLT heater(s) are on
+boolean HERMS_heater_ON=false; //True when the HEMS heat source is on
 
 //this controls the menu backend and the event generation
 MenuBackend menu = MenuBackend(menuEventUse,menuEventChange);
@@ -41,7 +51,7 @@ void menuSetup()
 {
   Serial.println("Setting up menu...");
 
-  menu.getRoot().add(root); 
+  menu.getRoot().add(root);
   root.addRight(preheat_liquor);
   //root.addLeft(settings);
   preheat_liquor.addRight(mash);
@@ -51,41 +61,57 @@ void menuSetup()
   settings.addRight(root);
 }
 
-/*
-	This is an important function
-	Here all use events are handled
-	
-	This is where you define a behaviour for a menu item
-*/
+// Called whenever the user presses the select/enter key
 void menuEventUse(MenuUseEvent used)
 {
- // Serial.print("Menu use ");
- // Serial.println(used.item.getName());
-  
   if (used.item == preheat_liquor) {
     toggle_preheat_liquor();
   }
-}
+})
 
-/*
-	This is an important function
-	Here we get a notification whenever the user changes the menu
-	That is, when the menu is navigated
-*/
+// Called whenever the menu changes
 void menuEventChange(MenuChangeEvent changed)
 {
 	Serial.print("Menu change ");
 	Serial.print(changed.from.getName());
 	Serial.print(" ");
-	Serial.println(changed.to.getName());
-  lcdtopRow(changed.to.getName());
+    Serial.println(changed.to.getName());
+    // Display the current menu
+    lcdtopRow(changed.to.getName());
+
+    if (changed.to==preheat_liquor)
+    {
+        display_temp_menu(HLT_temp,Strike_temp)
+    } else if (changed.to==mash) {
+        display_temp_menu(HERMS_out_temp, Mash_target)
+    }
 }
 
+void display_temp_menu(float current, float target) {
+    lcdClearBottomRow();
+    lcd.setCursor(0,1);
+    lcd.print("T=");
+    lcd.setCursor(2,1);
+    lcd.print(current);
+
+    lcd.setCursor(8,1);
+
+    if(liquor_preheat) {
+        lcd.print("ON");
+    } else {
+        lcd.print("OFF");
+    }
+
+    lcd.setCursor(12,1);
+    lcd.print("C=");
+    lcd.setCursor(14,1);
+    lcd.print(target);
+}
 
 void Button_Pressed() {
   // Keep this as short as possible - because you are holding up the proc
   // So we will handle this by just marking that an interrupt has happened,
-  // The rest of the code will need to monitor for this and abort long running 
+  // The rest of the code will need to monitor for this and abort long running
   // processes if they find out there is an interrupt.
   buttonPress=true;
 }
@@ -93,53 +119,58 @@ void Button_Pressed() {
 void setup() {
   // Debugging output
   Serial.begin(9600);
-  
-  // initialise the LCD 
+
+  //Setup the pins
+  pinMode(HLT_HEATER_1, OUTPUT);
+  pinMode(HLT_HEATER_2, OUTPUT);
+  pinMode(HERMS_HEATER, OUTPUT);
+
+  // initialise the LCD
   lcd = Adafruit_RGBLCDShield();
-  // set up the LCD's number of columns and rows: 
+  // set up the LCD's number of columns and rows:
   lcd.begin(16, 2);
 
   // Print a message to the LCD. We track how long it takes since
   // this library has been optimized a bit and we're proud of it :)
   int time = millis();
-  
+
   //Catch the external interrupt from the button input
   attachInterrupt(1,Button_Pressed,FALLING);
   //This signal is active low, so HIGH-to-LOW when interrupt
 
   //Tell the MCP23017 to start making interrupts
   lcd.enableButtonInterrupt();
-  
+
   //Clear the interrupt if it was present
   while (!digitalRead(3)) {
     lcd.readButtons();
   }
-  
+
   menuSetup();
-  
+
   startBrewConroller();
 }
 
 uint8_t i=0;
 void loop() {
-  
 
-  //lcd.setCursor(0, 1);
-  //lcd.print(millis()/1000);
-  
   if (buttonPress) {
-    uint8_t buttons = lcd.readButtons();
-    
+    uint8_t buttons = lcd.readButtons(); // NB This allows for >1 button to be depressed
+
     if (buttons & BUTTON_UP) { up_pressed(); }
     if (buttons & BUTTON_DOWN) { down_pressed(); }
     if (buttons & BUTTON_RIGHT) { right_pressed(); }
     if (buttons & BUTTON_LEFT) { left_pressed(); }
     if (buttons & BUTTON_SELECT) { enter_pressed(); }
-    
+
     buttonPress=false;
-  } else 
+  } else
   {
       updateTemperatures();
+
+      if (liquor_preheat) {
+        cycle_HLT()
+      }
   }
 
 }
@@ -150,52 +181,60 @@ void startBrewConroller()
   lcd.clear();
   lcdtopRow("Brew Controller");
   lcdBottomRow(VERSION);
+  sleep(1200);
+  lcdtopRow(menu.getRoot().getName());
 }
 
 void left_pressed() {
-  Serial.println("Left"); 
+  Serial.println("Left");
   menu.moveLeft();
 }
 
 void right_pressed() {
-  Serial.println("Right"); 
+  Serial.println("Right");
   menu.moveRight();
 }
 void up_pressed() {
-  Serial.println("Up"); 
+  Serial.println("Up");
   menu.moveUp();
 }
 void down_pressed() {
-  Serial.println("Down"); 
+  Serial.println("Down");
   menu.moveDown();
 }
 void enter_pressed() {
-  Serial.println("Enter"); 
+  Serial.println("Enter");
   menu.use();
-}
-
-void update_display()
-{
 }
 
 void lcdtopRow( const char message[20])
 {
-  lcd.clear();
   lcd.setCursor(0,0);
   lcd.print(message);
 }
 
+void lcdClearTopRow( void )
+{
+    lcd.setCursor(0,0);
+    lcd.print("                    ");
+}
+
 void lcdBottomRow( const char message[20] )
 {
-  lcd.clear();
   lcd.setCursor(0,1);
   lcd.print(message);
 }
 
-void toggle_preheat_liquor() 
+void lcdClearBottomRow(void)
+{
+    lcd.setCursor(0,1);
+    lcd.print("                    ");
+}
+
+void toggle_preheat_liquor()
 {
   liquor_preheat = !liquor_preheat;
-  
+
 //  if (liquor_preheat) {
 //    lcdBottomRow("ON");
 //  } else {
@@ -212,7 +251,7 @@ unsigned char identifyProbe (byte * addr)
 {
   byte i,probe;
   byte found_probe = 255;
-  
+
   for (probe=0; probe < NUM_PROBES & found_probe==255; probe++) {
     for( i = 0; i < 8; i++) {
       if (addr[i] != PROBE[probe][i])  {break;} // It's not this probe so bail
@@ -229,67 +268,67 @@ void updateTemperatures()
   byte data[12];
   byte addr[8];
   float celsius;
-  
+
   while ( ds.search(addr)) {
-    
+
     if (OneWire::crc8(addr, 7) == addr[7]) {
       probe = identifyProbe(addr);
-      
+
       Serial.print("Probe:"); Serial.print(probe); Serial.print(" ");
-    
+
       ds.reset();
       ds.select(addr);
       ds.write(0x44,1);  // Issue the convert command
-      
+
       if (parasitic_mode) {
         delay(1000);     // maybe 750ms is enough, maybe not
       } else
       { // Poll for completion
-        while (ds.read() == 0) { 
+        while (ds.read() == 0) {
           if (buttonPress)
           {
             // An interrupt has occurred, so abort and bail
             ds.reset_search();
             return;
           }
-        } 
+        }
       }
-      
+
       // we might do a ds.depower() here, but the reset will take care of it.
-      
+
       present = ds.reset();
-      ds.select(addr);    
+      ds.select(addr);
       ds.write(0xBE);         // Read Scratchpad
-    
+
        for ( i = 0; i < 9; i++) {           // we need 9 bytes
         data[i] = ds.read();
       }
-  
-    // Verify the CRC matches and that the data isn't corrupt     
+
+    // Verify the CRC matches and that the data isn't corrupt
       if (OneWire::crc8(data, 8) == data[8]) {
         // convert the data to actual temperature
         unsigned int raw = (data[1] << 8) | data[0];
-      
+
         byte cfg = (data[4] & 0x60);
         if (cfg == 0x00) raw = raw << 3;  // 9 bit resolution, 93.75 ms
         else if (cfg == 0x20) raw = raw << 2; // 10 bit res, 187.5 ms
         else if (cfg == 0x40) raw = raw << 1; // 11 bit res, 375 ms
         // default is 12 bit resolution, 750 ms conversion time
-      
+
         celsius = (float)raw / 16.0;
         Serial.print("  Temperature = ");
         Serial.print(celsius);
         Serial.println(" Celsius, ");
-        
+
         switch(probe) {
           case 0:
             HLT_temp = celsius; break;
-          case 1: 
+          case 1:
             HERMS_out_temp = celsius; break;
-          case 2: 
+          case 2:
             mash_temp = celsius; break;
         }
-        
+
       } else {
        Serial.println("CRC mismatch - ignoring reading");
       }
@@ -298,9 +337,41 @@ void updateTemperatures()
       Serial.println("CRC mismatch - ignoring reading");
     }
   }
-  
+
   ds.reset_search();
 
 }
 
+void cycle_HLT()
+{
+    if (HLT_Heater_ON && HLT_temp>=Strike_temp) {
+        toggle_HLT_Heater();
+    } else if (!HLT_Heater_ON && Strike_temp>HLT_temp) {
+        toggle_HLT_Heater();
+    }
 
+}
+
+HERMS_out_temp Mash_target
+void cycle_HERMS()
+{
+    if (HERMS_Heater_ON && HERMS_out_temp>=Mash_target)
+    {
+        toggle_HERMS_Heater();
+    } else if (!HERMS_Heater_ON && Mash_target>HERMS_out_temp) {
+        toggle_HERMS_Heater();
+    }
+})
+
+void toggle_HLT_Heater()
+{
+    HLT_Heater_ON = ! HLT_Heater_ON;
+    digitalWrite(HLT_HEATER_1, HLT_Heater_ON);
+    digitalWrite(HLT_HEATER_2, HLT_Heater_ON);
+}
+
+void toggle_HERMS_Heater()
+{
+    HERMS_Heater_ON = ! HERMS_Heater_ON;
+    digitalWrite(HERMS_HEATER,HERMS_Heater_ON);
+}
