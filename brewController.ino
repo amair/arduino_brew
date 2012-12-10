@@ -96,18 +96,18 @@ void display_temp_menu(float current, float target) {
     lcd.setCursor(2,1);
     lcd.print(current);
 
-    lcd.setCursor(8,1);
-
-    if(liquor_preheat) {
-        lcd.print("ON");
-    } else {
-        lcd.print("OFF");
-    }
-
-    lcd.setCursor(12,1);
-    lcd.print("C=");
-    lcd.setCursor(14,1);
-    lcd.print(target);
+//    lcd.setCursor(8,1);
+//
+//    if(liquor_preheat) {
+//        lcd.print("ON");
+//    } else {
+//        lcd.print("OFF");
+//    }
+//
+//    lcd.setCursor(12,1);
+//    lcd.print("C=");
+//    lcd.setCursor(14,1);
+//    lcd.print(target);
 }
 
 void Button_Pressed() {
