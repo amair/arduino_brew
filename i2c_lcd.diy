@@ -26,11 +26,11 @@
       <alpha>127</alpha>
       <value></value>
       <controlPoints>
-        <java.awt.Point x="2.4" y="1.4"/>
-        <java.awt.Point x="8.0" y="7.1"/>
+        <java.awt.Point x="2.3" y="1.4"/>
+        <java.awt.Point x="7.9" y="7.0"/>
       </controlPoints>
-      <firstPoint x="2.4" y="1.4"/>
-      <secondPoint x="8.0" y="7.1"/>
+      <firstPoint x="2.3" y="1.4"/>
+      <secondPoint x="7.9" y="7.0"/>
       <boardColor>
         <red>248</red>
         <green>235</green>
@@ -220,7 +220,7 @@
       <size reference="../../org.diylc.components.connectivity.TraceCut/size"/>
       <fillColor reference="../../org.diylc.components.connectivity.CopperTrace/bodyColor"/>
       <borderColor reference="../../org.diylc.components.connectivity.TraceCut/borderColor"/>
-      <point x="5.3" y="2.0"/>
+      <point x="6.2" y="2.0"/>
     </org.diylc.components.connectivity.TraceCut>
     <org.diylc.components.connectivity.SolderPad>
       <name>Pad1</name>
@@ -1069,7 +1069,7 @@
       <name>J19</name>
       <alpha>127</alpha>
       <points>
-        <java.awt.Point x="5.1" y="1.7"/>
+        <java.awt.Point x="5.1" y="3.2"/>
         <java.awt.Point x="5.1" y="6.9"/>
       </points>
       <bodyColor reference="../../org.diylc.components.connectivity.CopperTrace/bodyColor"/>
@@ -1107,9 +1107,9 @@
       <name>VR2</name>
       <alpha>127</alpha>
       <controlPoints>
-        <java.awt.Point x="6.3" y="1.8"/>
-        <java.awt.Point x="6.5" y="1.9"/>
-        <java.awt.Point x="6.3" y="2.0"/>
+        <java.awt.Point x="6.4" y="1.8"/>
+        <java.awt.Point x="6.6" y="1.9"/>
+        <java.awt.Point x="6.4" y="2.0"/>
       </controlPoints>
       <orientation>DEFAULT</orientation>
       <taper>LIN</taper>
@@ -1192,7 +1192,7 @@
       <name>J25</name>
       <alpha>127</alpha>
       <points>
-        <java.awt.Point x="2.9" y="2.6"/>
+        <java.awt.Point x="2.9" y="2.7"/>
         <java.awt.Point x="2.9" y="3.7"/>
       </points>
       <bodyColor reference="../../org.diylc.components.connectivity.CopperTrace/bodyColor"/>
@@ -1206,7 +1206,7 @@
       <name>J26</name>
       <alpha>127</alpha>
       <points>
-        <java.awt.Point x="3.0" y="2.7"/>
+        <java.awt.Point x="3.0" y="2.8"/>
         <java.awt.Point x="3.0" y="3.6"/>
       </points>
       <bodyColor reference="../../org.diylc.components.connectivity.CopperTrace/bodyColor"/>
@@ -1220,7 +1220,7 @@
       <name>J27</name>
       <alpha>127</alpha>
       <points>
-        <java.awt.Point x="3.1" y="2.8"/>
+        <java.awt.Point x="3.1" y="2.9"/>
         <java.awt.Point x="3.1" y="3.5"/>
       </points>
       <bodyColor reference="../../org.diylc.components.connectivity.CopperTrace/bodyColor"/>
@@ -1234,7 +1234,7 @@
       <name>J28</name>
       <alpha>127</alpha>
       <points>
-        <java.awt.Point x="3.2" y="2.9"/>
+        <java.awt.Point x="3.2" y="3.0"/>
         <java.awt.Point x="3.2" y="3.4"/>
       </points>
       <bodyColor reference="../../org.diylc.components.connectivity.CopperTrace/bodyColor"/>
@@ -1410,6 +1410,54 @@
       <bodyColor reference="../../org.diylc.components.connectivity.Jumper[29]/bodyColor"/>
       <borderColor reference="../../org.diylc.components.connectivity.SolderPad[5]/color"/>
       <labelColor reference="../../org.diylc.components.connectivity.SolderPad[5]/color"/>
+      <leadColor>
+        <red>0</red>
+        <green>0</green>
+        <blue>0</blue>
+        <alpha>255</alpha>
+      </leadColor>
+      <display>NAME</display>
+      <flipStanding>false</flipStanding>
+    </org.diylc.components.connectivity.Jumper>
+    <org.diylc.components.connectivity.Jumper>
+      <name>J31</name>
+      <alpha>127</alpha>
+      <points>
+        <java.awt.Point x="5.4" y="1.8"/>
+        <java.awt.Point x="5.4" y="3.1"/>
+      </points>
+      <bodyColor>
+        <red>255</red>
+        <green>255</green>
+        <blue>255</blue>
+        <alpha>255</alpha>
+      </bodyColor>
+      <borderColor>
+        <red>0</red>
+        <green>0</green>
+        <blue>0</blue>
+        <alpha>255</alpha>
+      </borderColor>
+      <labelColor reference="../borderColor"/>
+      <leadColor>
+        <red>255</red>
+        <green>0</green>
+        <blue>51</blue>
+        <alpha>255</alpha>
+      </leadColor>
+      <display>NAME</display>
+      <flipStanding>false</flipStanding>
+    </org.diylc.components.connectivity.Jumper>
+    <org.diylc.components.connectivity.Jumper>
+      <name>J34</name>
+      <alpha>127</alpha>
+      <points>
+        <java.awt.Point x="5.2" y="1.7"/>
+        <java.awt.Point x="5.2" y="3.2"/>
+      </points>
+      <bodyColor reference="../../org.diylc.components.connectivity.Jumper[33]/bodyColor"/>
+      <borderColor reference="../../org.diylc.components.connectivity.Jumper[33]/borderColor"/>
+      <labelColor reference="../../org.diylc.components.connectivity.Jumper[33]/borderColor"/>
       <leadColor>
         <red>0</red>
         <green>0</green>
