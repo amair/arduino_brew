@@ -26,11 +26,11 @@
       <alpha>127</alpha>
       <value></value>
       <controlPoints>
-        <java.awt.Point x="1.6" y="1.5"/>
-        <java.awt.Point x="7.9" y="7.1"/>
+        <java.awt.Point x="2.4" y="1.4"/>
+        <java.awt.Point x="8.0" y="7.1"/>
       </controlPoints>
-      <firstPoint x="1.6" y="1.5"/>
-      <secondPoint x="7.9" y="7.1"/>
+      <firstPoint x="2.4" y="1.4"/>
+      <secondPoint x="8.0" y="7.1"/>
       <boardColor>
         <red>248</red>
         <green>235</green>
@@ -128,10 +128,10 @@
     <org.diylc.components.connectivity.GroundFill>
       <name>UP</name>
       <controlPoints>
-        <java.awt.Point x="5.6" y="6.0"/>
-        <java.awt.Point x="5.6" y="6.2"/>
-        <java.awt.Point x="5.8" y="6.2"/>
-        <java.awt.Point x="5.8" y="6.0"/>
+        <java.awt.Point x="5.7" y="6.0"/>
+        <java.awt.Point x="5.7" y="6.2"/>
+        <java.awt.Point x="5.9" y="6.2"/>
+        <java.awt.Point x="5.9" y="6.0"/>
       </controlPoints>
       <color>
         <red>0</red>
@@ -162,10 +162,10 @@
     <org.diylc.components.connectivity.GroundFill>
       <name>GF1</name>
       <controlPoints>
-        <java.awt.Point x="7.0" y="6.0"/>
-        <java.awt.Point x="7.0" y="6.2"/>
-        <java.awt.Point x="7.2" y="6.2"/>
-        <java.awt.Point x="7.2" y="6.0"/>
+        <java.awt.Point x="6.9" y="6.0"/>
+        <java.awt.Point x="6.9" y="6.2"/>
+        <java.awt.Point x="7.1" y="6.2"/>
+        <java.awt.Point x="7.1" y="6.0"/>
       </controlPoints>
       <color>
         <red>0</red>
@@ -206,7 +206,7 @@
         <blue>0</blue>
         <alpha>255</alpha>
       </borderColor>
-      <point x="5.9" y="6.0"/>
+      <point x="6.0" y="6.0"/>
     </org.diylc.components.connectivity.TraceCut>
     <org.diylc.components.connectivity.TraceCut>
       <name>Cut4</name>
@@ -220,7 +220,7 @@
       <size reference="../../org.diylc.components.connectivity.TraceCut/size"/>
       <fillColor reference="../../org.diylc.components.connectivity.CopperTrace/bodyColor"/>
       <borderColor reference="../../org.diylc.components.connectivity.TraceCut/borderColor"/>
-      <point x="2.2" y="2.0"/>
+      <point x="5.3" y="2.0"/>
     </org.diylc.components.connectivity.TraceCut>
     <org.diylc.components.connectivity.SolderPad>
       <name>Pad1</name>
@@ -229,7 +229,7 @@
         <unit class="org.diylc.core.measures.SizeUnit">in</unit>
       </size>
       <color reference="../../org.diylc.components.connectivity.CopperTrace/borderColor"/>
-      <point x="1.7" y="1.5"/>
+      <point x="2.4" y="1.5"/>
       <type>ROUND</type>
       <holeSize>
         <value>0.8</value>
@@ -241,7 +241,7 @@
       <name>Pad2</name>
       <size reference="../../org.diylc.components.connectivity.SolderPad/size"/>
       <color reference="../../org.diylc.components.connectivity.CopperTrace/borderColor"/>
-      <point x="1.7" y="4.4"/>
+      <point x="2.4" y="4.4"/>
       <type>ROUND</type>
       <holeSize reference="../../org.diylc.components.connectivity.SolderPad/holeSize"/>
       <layer>_1</layer>
@@ -250,7 +250,7 @@
       <name>Pad3</name>
       <size reference="../../org.diylc.components.connectivity.SolderPad/size"/>
       <color reference="../../org.diylc.components.connectivity.CopperTrace/borderColor"/>
-      <point x="1.7" y="4.5"/>
+      <point x="2.4" y="4.5"/>
       <type>ROUND</type>
       <holeSize reference="../../org.diylc.components.connectivity.SolderPad/holeSize"/>
       <layer>_1</layer>
@@ -259,7 +259,7 @@
       <name>Pad4</name>
       <size reference="../../org.diylc.components.connectivity.SolderPad/size"/>
       <color reference="../../org.diylc.components.connectivity.CopperTrace/borderColor"/>
-      <point x="1.7" y="6.9"/>
+      <point x="2.4" y="6.9"/>
       <type>ROUND</type>
       <holeSize reference="../../org.diylc.components.connectivity.SolderPad/holeSize"/>
       <layer>_1</layer>
@@ -276,7 +276,7 @@
         <blue>0</blue>
         <alpha>255</alpha>
       </color>
-      <point x="1.7" y="1.6"/>
+      <point x="2.4" y="1.6"/>
       <type>ROUND</type>
       <holeSize>
         <value>0.8</value>
@@ -361,8 +361,8 @@
         <unit class="org.diylc.core.measures.SizeUnit">in</unit>
       </width>
       <points>
-        <java.awt.Point x="6.0" y="1.5"/>
-        <java.awt.Point x="6.0" y="5.4"/>
+        <java.awt.Point x="6.7" y="4.3"/>
+        <java.awt.Point x="6.7" y="6.0"/>
       </points>
       <bodyColor>
         <red>130</red>
@@ -505,8 +505,8 @@
         <unit class="org.diylc.core.measures.SizeUnit">in</unit>
       </width>
       <points>
-        <java.awt.Point x="5.5" y="1.5"/>
-        <java.awt.Point x="5.5" y="6.0"/>
+        <java.awt.Point x="5.6" y="4.3"/>
+        <java.awt.Point x="5.6" y="6.1"/>
       </points>
       <bodyColor reference="../../org.diylc.components.passive.Resistor/bodyColor"/>
       <borderColor reference="../../org.diylc.components.passive.Resistor/borderColor"/>
@@ -615,8 +615,8 @@
         <unit class="org.diylc.core.measures.SizeUnit">in</unit>
       </width>
       <points>
-        <java.awt.Point x="6.7" y="1.5"/>
-        <java.awt.Point x="6.7" y="6.0"/>
+        <java.awt.Point x="7.4" y="4.3"/>
+        <java.awt.Point x="7.4" y="6.0"/>
       </points>
       <bodyColor reference="../../org.diylc.components.passive.Resistor/bodyColor"/>
       <borderColor reference="../../org.diylc.components.passive.Resistor/borderColor"/>
@@ -687,8 +687,8 @@
         <unit class="org.diylc.core.measures.SizeUnit">in</unit>
       </width>
       <points>
-        <java.awt.Point x="7.4" y="1.5"/>
-        <java.awt.Point x="7.4" y="6.0"/>
+        <java.awt.Point x="6.6" y="4.3"/>
+        <java.awt.Point x="6.6" y="5.4"/>
       </points>
       <bodyColor reference="../../org.diylc.components.passive.Resistor/bodyColor"/>
       <borderColor reference="../../org.diylc.components.passive.Resistor/borderColor"/>
@@ -711,8 +711,8 @@
         <unit class="org.diylc.core.measures.SizeUnit">in</unit>
       </length>
       <points>
-        <java.awt.Point x="7.3" y="6.0"/>
-        <java.awt.Point x="7.3" y="6.9"/>
+        <java.awt.Point x="7.2" y="6.0"/>
+        <java.awt.Point x="7.2" y="6.9"/>
       </points>
       <bodyColor reference="../../org.diylc.components.passive.RadialElectrolytic/bodyColor"/>
       <borderColor reference="../../org.diylc.components.passive.RadialElectrolytic/borderColor"/>
@@ -737,8 +737,8 @@
       <name>J6</name>
       <alpha>127</alpha>
       <points>
-        <java.awt.Point x="7.5" y="4.8"/>
-        <java.awt.Point x="7.5" y="3.8"/>
+        <java.awt.Point x="7.6" y="4.8"/>
+        <java.awt.Point x="7.6" y="3.8"/>
       </points>
       <bodyColor reference="../../org.diylc.components.connectivity.CopperTrace/bodyColor"/>
       <borderColor reference="../../org.diylc.components.connectivity.CopperTrace/borderColor"/>
@@ -822,8 +822,8 @@
       <name>J11</name>
       <alpha>127</alpha>
       <points>
-        <java.awt.Point x="7.5" y="6.0"/>
-        <java.awt.Point x="7.5" y="4.9"/>
+        <java.awt.Point x="7.6" y="6.0"/>
+        <java.awt.Point x="7.6" y="4.9"/>
       </points>
       <bodyColor reference="../../org.diylc.components.connectivity.CopperTrace/bodyColor"/>
       <borderColor reference="../../org.diylc.components.connectivity.CopperTrace/borderColor"/>
@@ -977,7 +977,7 @@
         <unit class="org.diylc.core.measures.SizeUnit">in</unit>
       </width>
       <points>
-        <java.awt.Point x="3.5" y="1.5"/>
+        <java.awt.Point x="3.5" y="4.1"/>
         <java.awt.Point x="3.5" y="4.4"/>
       </points>
       <bodyColor reference="../../org.diylc.components.passive.Resistor/bodyColor"/>
@@ -1005,7 +1005,7 @@
         <unit class="org.diylc.core.measures.SizeUnit">in</unit>
       </width>
       <points>
-        <java.awt.Point x="3.3" y="1.5"/>
+        <java.awt.Point x="3.3" y="4.1"/>
         <java.awt.Point x="3.3" y="4.5"/>
       </points>
       <bodyColor reference="../../org.diylc.components.passive.Resistor/bodyColor"/>
@@ -1032,22 +1032,22 @@
         <unit class="org.diylc.core.measures.SizeUnit">in</unit>
       </pinSpacing>
       <controlPoints>
-        <java.awt.Point x="2.4" y="1.7"/>
-        <java.awt.Point x="2.4" y="1.8"/>
-        <java.awt.Point x="2.4" y="1.9"/>
-        <java.awt.Point x="2.4" y="2.0"/>
-        <java.awt.Point x="2.4" y="2.1"/>
-        <java.awt.Point x="2.4" y="2.2"/>
-        <java.awt.Point x="2.4" y="2.3"/>
-        <java.awt.Point x="2.4" y="2.4"/>
-        <java.awt.Point x="2.4" y="2.5"/>
-        <java.awt.Point x="2.4" y="2.6"/>
-        <java.awt.Point x="2.4" y="2.7"/>
-        <java.awt.Point x="2.4" y="2.8"/>
-        <java.awt.Point x="2.4" y="2.9"/>
-        <java.awt.Point x="2.4" y="3.0"/>
-        <java.awt.Point x="2.4" y="3.1"/>
-        <java.awt.Point x="2.4" y="3.2"/>
+        <java.awt.Point x="5.0" y="1.7"/>
+        <java.awt.Point x="5.0" y="1.8"/>
+        <java.awt.Point x="5.0" y="1.9"/>
+        <java.awt.Point x="5.0" y="2.0"/>
+        <java.awt.Point x="5.0" y="2.1"/>
+        <java.awt.Point x="5.0" y="2.2"/>
+        <java.awt.Point x="5.0" y="2.3"/>
+        <java.awt.Point x="5.0" y="2.4"/>
+        <java.awt.Point x="5.0" y="2.5"/>
+        <java.awt.Point x="5.0" y="2.6"/>
+        <java.awt.Point x="5.0" y="2.7"/>
+        <java.awt.Point x="5.0" y="2.8"/>
+        <java.awt.Point x="5.0" y="2.9"/>
+        <java.awt.Point x="5.0" y="3.0"/>
+        <java.awt.Point x="5.0" y="3.1"/>
+        <java.awt.Point x="5.0" y="3.2"/>
       </controlPoints>
       <display>NAME</display>
       <bodyColor reference="../../org.diylc.components.semiconductors.DIL__IC/bodyColor"/>
@@ -1069,8 +1069,8 @@
       <name>J19</name>
       <alpha>127</alpha>
       <points>
-        <java.awt.Point x="2.3" y="1.7"/>
-        <java.awt.Point x="2.3" y="6.9"/>
+        <java.awt.Point x="5.1" y="1.7"/>
+        <java.awt.Point x="5.1" y="6.9"/>
       </points>
       <bodyColor reference="../../org.diylc.components.connectivity.CopperTrace/bodyColor"/>
       <borderColor reference="../../org.diylc.components.connectivity.CopperTrace/borderColor"/>
@@ -1088,8 +1088,8 @@
       <name>J20</name>
       <alpha>127</alpha>
       <points>
-        <java.awt.Point x="2.2" y="1.5"/>
-        <java.awt.Point x="2.2" y="1.8"/>
+        <java.awt.Point x="5.3" y="1.5"/>
+        <java.awt.Point x="5.3" y="1.8"/>
       </points>
       <bodyColor reference="../../org.diylc.components.connectivity.CopperTrace/bodyColor"/>
       <borderColor reference="../../org.diylc.components.connectivity.CopperTrace/borderColor"/>
@@ -1107,9 +1107,9 @@
       <name>VR2</name>
       <alpha>127</alpha>
       <controlPoints>
-        <java.awt.Point x="1.9" y="1.8"/>
-        <java.awt.Point x="2.1" y="1.9"/>
-        <java.awt.Point x="1.9" y="2.0"/>
+        <java.awt.Point x="6.3" y="1.8"/>
+        <java.awt.Point x="6.5" y="1.9"/>
+        <java.awt.Point x="6.3" y="2.0"/>
       </controlPoints>
       <orientation>DEFAULT</orientation>
       <taper>LIN</taper>
@@ -1131,8 +1131,8 @@
       <name>J21</name>
       <alpha>127</alpha>
       <points>
-        <java.awt.Point x="1.8" y="1.7"/>
-        <java.awt.Point x="1.8" y="2.0"/>
+        <java.awt.Point x="7.2" y="1.7"/>
+        <java.awt.Point x="7.2" y="2.0"/>
       </points>
       <bodyColor reference="../../org.diylc.components.connectivity.CopperTrace/bodyColor"/>
       <borderColor reference="../../org.diylc.components.connectivity.CopperTrace/borderColor"/>
@@ -1280,8 +1280,8 @@
         <unit class="org.diylc.core.measures.SizeUnit">in</unit>
       </width>
       <points>
-        <java.awt.Point x="6.9" y="1.5"/>
-        <java.awt.Point x="6.9" y="6.6"/>
+        <java.awt.Point x="3.7" y="5.3"/>
+        <java.awt.Point x="3.7" y="6.6"/>
       </points>
       <bodyColor>
         <red>130</red>
@@ -1319,8 +1319,8 @@
         <unit class="org.diylc.core.measures.SizeUnit">in</unit>
       </length>
       <points>
-        <java.awt.Point x="7.0" y="6.6"/>
-        <java.awt.Point x="7.0" y="6.9"/>
+        <java.awt.Point x="7.4" y="6.6"/>
+        <java.awt.Point x="7.4" y="6.9"/>
       </points>
       <bodyColor>
         <red>234</red>
@@ -1404,8 +1404,8 @@
       <name>J33</name>
       <alpha>127</alpha>
       <points>
-        <java.awt.Point x="6.0" y="5.6"/>
-        <java.awt.Point x="6.0" y="6.9"/>
+        <java.awt.Point x="7.7" y="5.6"/>
+        <java.awt.Point x="7.7" y="6.9"/>
       </points>
       <bodyColor reference="../../org.diylc.components.connectivity.Jumper[29]/bodyColor"/>
       <borderColor reference="../../org.diylc.components.connectivity.SolderPad[5]/color"/>
