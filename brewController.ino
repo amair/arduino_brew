@@ -9,7 +9,7 @@
 #include <Adafruit_RGBLCDShield.h>
 #include <MenuBackend.h>
 
-const char VERSION[6] ="0.1";
+const char VERSION[6] ="0.2";
 
 // This defines the addresses of the 2Wire devices in use so we can identify them
 #define NUM_PROBES 2
@@ -28,6 +28,8 @@ const uint8_t HLT_HEATER_1=13; // Heater coil 1 in HLT
 const uint8_t HLT_HEATER_2=12; // Heater coil 2 in HLT
 const uint8_t HERMS_HEATER=11; // Heater coil in HERMS recirculator
 
+enum DISPLAY_SCREEN{ROOT, PREHEAT, MASH, SETTINGS};  // Each screen must be defined here
+
 volatile boolean buttonPress=false;// Indicates if we have received an
                                    // Interupt to tell us a button needs read
 boolean liquor_preheat = false; // Are we in preheat mode for the HLT
@@ -40,7 +42,10 @@ float Strike_temp=80.0; //Target temperature for HLT water
 float Mash_target=65.5; // Target mash temp inside mash tun
 
 boolean HLT_heater_ON=false; //True when the HLT heater(s) are on
-boolean HERMS_heater_ON=false; //True when the HEMS heat source is on
+boolean HERMS_heater_ON=false; //True when the HERMS heat source is on
+
+DISPLAY_SCREEN display=ROOT; // The currently displayed screen
+boolean display_refresh=true; // Set to true when the display should be refreshed
 
 //this controls the menu backend and the event generation
 MenuBackend menu = MenuBackend(menuEventUse,menuEventChange);
@@ -48,6 +53,7 @@ MenuItem root = MenuItem("Root");
 MenuItem preheat_liquor = MenuItem("Preheat");
 MenuItem mash = MenuItem("Mash");
 MenuItem settings = MenuItem("Settings");
+char prev_item[5], next_item[5];
 
 void menuSetup()
 {
@@ -68,46 +74,51 @@ void menuEventUse(MenuUseEvent used)
 {
   if (used.item == preheat_liquor) {
     toggle_preheat_liquor();
+  } else if (used.item == mash ) {
+    toggle_herms_recirc();
   }
 }
 
 // Called whenever the menu changes
 void menuEventChange(MenuChangeEvent changed)
 {
-	Serial.print("Menu change ");
-	Serial.print(changed.from.getName());
-	Serial.print(" ");
-    Serial.println(changed.to.getName());
-    // Display the current menu
     lcdtopRow(changed.to.getName());
 
     if (changed.to==preheat_liquor)
     {
-        display_temp_menu(HLT_temp,Strike_temp);
+      display=PREHEAT;
     } else if (changed.to==mash) {
-        display_temp_menu(HERMS_out_temp, Mash_target);
+      display=MASH;
+    } else if (changed.to==root) {
+      display=ROOT;
+    } else if (changed.to==settings){
+      display=SETTINGS;
     }
+  display_refresh = true;
+  strncpy(next_item, changed.to.getRight()->getName(), 4);
+  next_item[5]='\0';
+  strncpy(prev_item, changed.to.getLeft()->getName(), 4);
+  prev_item[5]='\0';
 }
 
 void display_temp_menu(float current, float target) {
-    lcdClearBottomRow();
     lcd.setCursor(0,1);
-    lcd.print("T=");
-    lcd.setCursor(2,1);
-    lcd.print(current);
+    lcd.print("Current Temp = ");
+    lcd.setCursor(15,1);
+    lcd.print(current,2);
+    
+    lcd.setCursor(0,2);
+    lcd.print("Target Temp =");
+    lcd.setCursor(15,2);
+    lcd.print(target,2);
 
-//    lcd.setCursor(8,1);
-//
-//    if(liquor_preheat) {
-//        lcd.print("ON");
-//    } else {
-//        lcd.print("OFF");
-//    }
-//
-//    lcd.setCursor(12,1);
-//    lcd.print("C=");
-//    lcd.setCursor(14,1);
-//    lcd.print(target);
+    lcd.setCursor(9,3);
+
+    if((liquor_preheat && display==PREHEAT)||(herms_recirc && display==MASH)) {
+        lcd.print("ON ");
+    } else {
+        lcd.print("OFF");
+    }
 }
 
 void Button_Pressed() {
@@ -130,7 +141,7 @@ void setup() {
   // initialise the LCD
   lcd = Adafruit_RGBLCDShield();
   // set up the LCD's number of columns and rows:
-  lcd.begin(16, 2);
+  lcd.begin(20, 4);
 
   // Print a message to the LCD. We track how long it takes since
   // this library has been optimized a bit and we're proud of it :)
@@ -149,8 +160,6 @@ void setup() {
   }
 
   menuSetup();
-
-  startBrewConroller();
 }
 
 uint8_t i=0;
@@ -173,18 +182,25 @@ void loop() {
       if (liquor_preheat) {
         cycle_HLT();
       }
+      
+      if (herms_recirc) {
+        cycle_HERMS();
+      }
+      
+      if (display_refresh) {
+        updateDisplay();
+      } 
   }
 
 }
 
 
-void startBrewConroller()
+void display_root()
 {
   lcd.clear();
   lcdtopRow("Brew Controller");
-  lcdBottomRow(VERSION);
-  delay(1200);
-  lcdtopRow(menu.getRoot().getName());
+  lcd.setCursor(9,3);
+  lcd.print(VERSION);
 }
 
 void left_pressed() {
@@ -211,6 +227,7 @@ void enter_pressed() {
 
 void lcdtopRow( const char message[20])
 {
+  lcdClearTopRow();
   lcd.setCursor(0,0);
   lcd.print(message);
 }
@@ -223,25 +240,24 @@ void lcdClearTopRow( void )
 
 void lcdBottomRow( const char message[20] )
 {
-  lcd.setCursor(0,1);
+  lcd.setCursor(0,3);
   lcd.print(message);
 }
 
 void lcdClearBottomRow(void)
 {
-    lcd.setCursor(0,1);
+    lcd.setCursor(0,3);
     lcd.print("                    ");
 }
 
 void toggle_preheat_liquor()
 {
   liquor_preheat = !liquor_preheat;
+}
 
-//  if (liquor_preheat) {
-//    lcdBottomRow("ON");
-//  } else {
-//    lcdBottomRow("OFF");
-//  }
+void toggle_herms_recirc()
+{
+  herms_recirc=!herms_recirc;
 }
 
 // Function to test the address against the PROBE array to identify which one we are talking to
@@ -324,10 +340,13 @@ void updateTemperatures()
 
         switch(probe) {
           case 0:
+            if (celsius!=HLT_temp && display==PREHEAT) display_refresh=true;
             HLT_temp = celsius; break;
           case 1:
+            if (celsius!=HERMS_out_temp && display==MASH) display_refresh=true;
             HERMS_out_temp = celsius; break;
           case 2:
+            if (celsius!=mash_temp && display==MASH) display_refresh=true;
             mash_temp = celsius; break;
         }
 
@@ -367,12 +386,40 @@ void cycle_HERMS()
 void toggle_HLT_Heater()
 {
     HLT_heater_ON = ! HLT_heater_ON;
-    digitalWrite(HLT_HEATER_1, HLT_heater_ON);
-    digitalWrite(HLT_HEATER_2, HLT_heater_ON);
+    digitalWrite(HLT_HEATER_1, HLT_heater_ON ? HIGH : LOW );
+    digitalWrite(HLT_HEATER_2, HLT_heater_ON ? HIGH : LOW);
 }
 
 void toggle_HERMS_Heater()
 {
     HERMS_heater_ON = ! HERMS_heater_ON;
-    digitalWrite(HERMS_HEATER,HERMS_heater_ON);
+    Serial.print("Toggle Herms: ");
+    Serial.println(HERMS_heater_ON);
+    digitalWrite(HERMS_HEATER,HERMS_heater_ON ? HIGH : LOW);
+}
+
+void updateDisplay ()
+{
+  lcd.setCursor(0,3);
+  lcd.print("<");
+  lcd.print(prev_item);
+  lcd.setCursor(15,3);
+  lcd.print(next_item);
+  lcd.print(">");
+
+  switch (display) {
+    case ROOT:
+      display_root();
+    break;
+    case PREHEAT:
+       display_temp_menu(HLT_temp,Strike_temp);
+    break;
+    case MASH:
+       display_temp_menu(HERMS_out_temp, Mash_target);
+    break;
+    case SETTINGS:
+    break;
+  }
+  
+ display_refresh=false;
 }
