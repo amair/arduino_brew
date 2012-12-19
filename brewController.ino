@@ -24,9 +24,9 @@ Adafruit_RGBLCDShield lcd;
 
 //Arduino pins
 OneWire  ds(7);  // One wire thermometers on pin 7
-const uint8_t HLT_HEATER_1=13; // Heater coil 1 in HLT
-const uint8_t HLT_HEATER_2=12; // Heater coil 2 in HLT
-const uint8_t HERMS_HEATER=11; // Heater coil in HERMS recirculator
+const uint8_t HLT_HEATER_1=12; // Heater coil 1 in HLT
+const uint8_t HLT_HEATER_2=11; // Heater coil 2 in HLT
+const uint8_t HERMS_HEATER=10; // Heater coil in HERMS recirculator
 
 enum DISPLAY_SCREEN{ROOT, PREHEAT, MASH, SETTINGS};  // Each screen must be defined here
 
@@ -53,7 +53,8 @@ MenuItem root = MenuItem("Root");
 MenuItem preheat_liquor = MenuItem("Preheat");
 MenuItem mash = MenuItem("Mash");
 MenuItem settings = MenuItem("Settings");
-char prev_item[5], next_item[5];
+char prev_item[5];
+char next_item[5];
 
 void menuSetup()
 {
@@ -82,23 +83,32 @@ void menuEventUse(MenuUseEvent used)
 // Called whenever the menu changes
 void menuEventChange(MenuChangeEvent changed)
 {
-    lcdtopRow(changed.to.getName());
+  const char * name = changed.to.getName();
+  uint8_t len = strlen(name);
+  uint8_t start = (20-len)/2;
+  
+  lcdClearTopRow();
+  
+  lcd.setCursor(start,0);
+  lcd.print(name);
 
-    if (changed.to==preheat_liquor)
-    {
-      display=PREHEAT;
-    } else if (changed.to==mash) {
-      display=MASH;
-    } else if (changed.to==root) {
-      display=ROOT;
-    } else if (changed.to==settings){
-      display=SETTINGS;
-    }
+  if (changed.to==preheat_liquor)
+  {
+    display=PREHEAT;
+  } else if (changed.to==mash) {
+    display=MASH;
+  } else if (changed.to==root) {
+    display=ROOT;
+  } else if (changed.to==settings){
+    display=SETTINGS;
+  }
+
   display_refresh = true;
+  
   strncpy(next_item, changed.to.getRight()->getName(), 4);
-  next_item[5]='\0';
+  next_item[4]='\0';
   strncpy(prev_item, changed.to.getLeft()->getName(), 4);
-  prev_item[5]='\0';
+  prev_item[4]='\0';
 }
 
 void display_temp_menu(float current, float target) {
@@ -281,7 +291,7 @@ unsigned char identifyProbe (byte * addr)
 
 void updateTemperatures()
 {
-    byte probe;
+  byte probe;
   byte present = 0;
   byte data[12];
   byte addr[8];
@@ -386,6 +396,8 @@ void cycle_HERMS()
 void toggle_HLT_Heater()
 {
     HLT_heater_ON = ! HLT_heater_ON;
+    Serial.print("Toggle HLT: ");
+    Serial.println(HLT_heater_ON);
     digitalWrite(HLT_HEATER_1, HLT_heater_ON ? HIGH : LOW );
     digitalWrite(HLT_HEATER_2, HLT_heater_ON ? HIGH : LOW);
 }
