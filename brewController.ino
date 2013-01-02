@@ -38,14 +38,18 @@ float HLT_temp;
 float HERMS_out_temp;
 float mash_temp; // in Celsius as this is default for DS1820
 
-float Strike_temp=18.0;//80.0; //Target temperature for HLT water
-float Mash_target=18.0;//65.5; // Target mash temp inside mash tun
+float Strike_temp=80.0; //Target temperature for HLT water
+float Mash_target=65.5; // Target mash temp inside mash tun
 
 boolean HLT_heater_ON=false; //True when the HLT heater(s) are on
 boolean HERMS_heater_ON=false; //True when the HERMS heat source is on
 
 DISPLAY_SCREEN display=ROOT; // The currently displayed screen
 boolean display_refresh=true; // Set to true when the display should be refreshed
+
+boolean change_setting=false; // defines whether we are navigating the settings menu or changing values
+uint8_t current_setting = 0; // which setting are we changing or highlighting 
+const uint8_t NUMBER_SETTINGS=2;
 
 //this controls the menu backend and the event generation
 MenuBackend menu = MenuBackend(menuEventUse,menuEventChange);
@@ -77,10 +81,13 @@ void menuEventUse(MenuUseEvent used)
     toggle_preheat_liquor();
   } else if (used.item == mash ) {
     toggle_herms_recirc();
-  } else
-  {
-    Serial.println("Nothing to do here");
+  } else if (used.item == settings ) {
+    change_setting = !change_setting; //Toggle the settings mode
+  }else{
+    Serial.print("Enter pressed on unknown ");
   }
+  // Whenever we press a button we want a refresh
+  display_refresh=true;
 }
 
 // Called whenever the menu changes
@@ -90,7 +97,11 @@ void menuEventChange(MenuChangeEvent changed)
   uint8_t len = strlen(name);
   uint8_t start = (20-len)/2;
   
-  lcdClearTopRow();
+  //Stop any cursor blink or underline
+  lcd.noBlink();
+  lcd.noCursor();
+  
+  lcdClearRow(0);
   
   lcd.setCursor(start,0);
   lcd.print(name);
@@ -132,6 +143,28 @@ void display_temp_menu(float current, float target) {
     } else {
         lcd.print("OFF");
     }
+}
+
+void display_settings() {
+  lcd.noBlink();
+  lcd.noCursor();
+  
+  lcdClearRow(1);
+  lcd.setCursor(0,1);
+  lcd.print("HLT target = ");
+  lcd.print(Strike_temp);
+  
+  lcdClearRow(2);
+  lcd.setCursor(0,2);
+  lcd.print("Mash temp  = ");
+  lcd.print(Mash_target);
+  
+  lcd.setCursor(13,current_setting+1);
+  
+  if (change_setting)
+    lcd.blink();
+  else
+    lcd.cursor();
 }
 
 void Button_Pressed() {
@@ -177,56 +210,70 @@ void setup() {
 
 void display_root()
 {
-  lcd.clear();
-  lcdtopRow("Brew Controller");
-  lcd.setCursor(9,3);
+  lcdClearRow(1);
+  lcdClearRow(2);
+  
+  lcd.setCursor(1,1);
+  lcd.println("Brew Controller");
+  lcd.setCursor(9,2);
   lcd.print(VERSION);
 }
 
 void left_pressed() {
-  Serial.println("Left");
   menu.moveLeft();
 }
 
 void right_pressed() {
-  Serial.println("Right");
   menu.moveRight();
 }
 void up_pressed() {
-  Serial.println("Up");
-  menu.moveUp();
+  
+  if (menu.getCurrent() == settings)
+  {
+    if (change_setting) {
+      if (current_setting==0) Strike_temp += 0.25;
+      else if (current_setting==1) Mash_target += 0.25;
+    } else {
+      current_setting = (current_setting + 1) % NUMBER_SETTINGS;
+    }
+    display_refresh = true;
+  } else {
+    menu.moveUp();
+    Serial.println("Menu UP");
+  }
 }
 void down_pressed() {
-  Serial.println("Down");
-  menu.moveDown();
+  if (menu.getCurrent() == settings )
+  {
+    if (change_setting) {
+      if (current_setting==0) {
+        if (Strike_temp>0.25) Strike_temp -= 0.25;
+      } else if (current_setting==1) {
+        if (Mash_target > 0.25 ) Mash_target -= 0.25;
+      }
+    } else
+    {
+      if (current_setting ==0) {
+        current_setting=NUMBER_SETTINGS-1;
+      } else {
+        current_setting -=1;
+      }      
+      Serial.println(current_setting);
+    }
+    display_refresh = true;
+  } else {
+    menu.moveDown();
+    Serial.println("Menu DOWN");
+  }
 }
 void enter_pressed() {
   Serial.println("Enter");
   menu.use();
 }
 
-void lcdtopRow( const char message[20])
+void lcdClearRow( const uint8_t row )
 {
-  lcdClearTopRow();
-  lcd.setCursor(0,0);
-  lcd.print(message);
-}
-
-void lcdClearTopRow( void )
-{
-    lcd.setCursor(0,0);
-    lcd.print("                    ");
-}
-
-void lcdBottomRow( const char message[20] )
-{
-  lcd.setCursor(0,3);
-  lcd.print(message);
-}
-
-void lcdClearBottomRow(void)
-{
-    lcd.setCursor(0,3);
+    lcd.setCursor(0,row);
     lcd.print("                    ");
 }
 
@@ -236,7 +283,6 @@ void toggle_preheat_liquor()
   liquor_preheat = !liquor_preheat;
   Serial.println("Toggle preheat mode");
   toggle_HLT_Heater();
-  display_refresh=true;
 }
 
 // Allow a manual override of whether heaters are used or not
@@ -245,7 +291,6 @@ void toggle_herms_recirc()
   herms_recirc=!herms_recirc;
   Serial.println("Toggle HERMS mode");
   toggle_HERMS_Heater();
-  display_refresh=true;
 }
 
 // Function to test the address against the PROBE array to identify which one we are talking to
@@ -280,7 +325,7 @@ void updateTemperatures()
     if (OneWire::crc8(addr, 7) == addr[7]) {
       probe = identifyProbe(addr);
 
-      Serial.print("Probe:"); Serial.print(probe); Serial.print(" ");
+      //Serial.print("Probe:"); Serial.print(probe); Serial.print(" ");
 
       ds.reset();
       ds.select(addr);
@@ -322,9 +367,9 @@ void updateTemperatures()
         // default is 12 bit resolution, 750 ms conversion time
 
         celsius = (float)raw / 16.0;
-        Serial.print("  Temperature = ");
-        Serial.print(celsius);
-        Serial.println(" Celsius, ");
+//        Serial.print("  Temperature = ");
+//        Serial.print(celsius);
+//        Serial.println(" Celsius, ");
 
         switch(probe) {
           case 0:
@@ -408,6 +453,7 @@ void updateDisplay ()
        display_temp_menu(HERMS_out_temp, Mash_target);
     break;
     case SETTINGS:
+      display_settings();
     break;
   }
   
