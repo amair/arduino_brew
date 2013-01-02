@@ -9,7 +9,7 @@
 #include <Adafruit_RGBLCDShield.h>
 #include <MenuBackend.h>
 
-const char VERSION[6] ="0.2";
+const char VERSION[6] ="0.3";
 
 // This defines the addresses of the 2Wire devices in use so we can identify them
 #define NUM_PROBES 2
@@ -38,8 +38,8 @@ float HLT_temp;
 float HERMS_out_temp;
 float mash_temp; // in Celsius as this is default for DS1820
 
-float Strike_temp=80.0; //Target temperature for HLT water
-float Mash_target=65.5; // Target mash temp inside mash tun
+float Strike_temp=18.0;//80.0; //Target temperature for HLT water
+float Mash_target=18.0;//65.5; // Target mash temp inside mash tun
 
 boolean HLT_heater_ON=false; //True when the HLT heater(s) are on
 boolean HERMS_heater_ON=false; //True when the HERMS heat source is on
@@ -77,6 +77,9 @@ void menuEventUse(MenuUseEvent used)
     toggle_preheat_liquor();
   } else if (used.item == mash ) {
     toggle_herms_recirc();
+  } else
+  {
+    Serial.println("Nothing to do here");
   }
 }
 
@@ -172,39 +175,6 @@ void setup() {
   menuSetup();
 }
 
-uint8_t i=0;
-void loop() {
-
-  if (buttonPress) {
-    uint8_t buttons = lcd.readButtons(); // NB This allows for >1 button to be depressed
-
-    if (buttons & BUTTON_UP) { up_pressed(); }
-    if (buttons & BUTTON_DOWN) { down_pressed(); }
-    if (buttons & BUTTON_RIGHT) { right_pressed(); }
-    if (buttons & BUTTON_LEFT) { left_pressed(); }
-    if (buttons & BUTTON_SELECT) { enter_pressed(); }
-
-    buttonPress=false;
-  } else
-  {
-      updateTemperatures();
-
-      if (liquor_preheat) {
-        cycle_HLT();
-      }
-      
-      if (herms_recirc) {
-        cycle_HERMS();
-      }
-      
-      if (display_refresh) {
-        updateDisplay();
-      } 
-  }
-
-}
-
-
 void display_root()
 {
   lcd.clear();
@@ -260,14 +230,22 @@ void lcdClearBottomRow(void)
     lcd.print("                    ");
 }
 
+// Allow a manual override of whether heaters are used or not
 void toggle_preheat_liquor()
 {
   liquor_preheat = !liquor_preheat;
+  Serial.println("Toggle preheat mode");
+  toggle_HLT_Heater();
+  display_refresh=true;
 }
 
+// Allow a manual override of whether heaters are used or not
 void toggle_herms_recirc()
 {
   herms_recirc=!herms_recirc;
+  Serial.println("Toggle HERMS mode");
+  toggle_HERMS_Heater();
+  display_refresh=true;
 }
 
 // Function to test the address against the PROBE array to identify which one we are talking to
@@ -328,7 +306,7 @@ void updateTemperatures()
       ds.select(addr);
       ds.write(0xBE);         // Read Scratchpad
 
-       for ( i = 0; i < 9; i++) {           // we need 9 bytes
+      for ( uint8_t i = 0; i < 9; i++) {           // we need 9 bytes
         data[i] = ds.read();
       }
 
@@ -435,3 +413,35 @@ void updateDisplay ()
   
  display_refresh=false;
 }
+
+void loop() {
+
+  if (buttonPress) {
+    uint8_t buttons = lcd.readButtons(); // NB This allows for >1 button to be depressed
+
+    if (buttons & BUTTON_UP) { up_pressed(); }
+    if (buttons & BUTTON_DOWN) { down_pressed(); }
+    if (buttons & BUTTON_RIGHT) { right_pressed(); }
+    if (buttons & BUTTON_LEFT) { left_pressed(); }
+    if (buttons & BUTTON_SELECT) { enter_pressed(); }
+
+    buttonPress=false;
+  } else
+  {
+      updateTemperatures();
+
+      if (liquor_preheat) {
+        cycle_HLT();
+      }
+      
+      if (herms_recirc) {
+        cycle_HERMS();
+      }
+      
+      if (display_refresh) {
+        updateDisplay();
+      } 
+  }
+
+}
+
