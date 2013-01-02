@@ -44,12 +44,14 @@ float Mash_target=65.5; // Target mash temp inside mash tun
 boolean HLT_heater_ON=false; //True when the HLT heater(s) are on
 boolean HERMS_heater_ON=false; //True when the HERMS heat source is on
 
+unsigned long mash_start_time = 0; // Number of seconds when mash started
+
 DISPLAY_SCREEN display=ROOT; // The currently displayed screen
 boolean display_refresh=true; // Set to true when the display should be refreshed
 
 boolean change_setting=false; // defines whether we are navigating the settings menu or changing values
 uint8_t current_setting = 0; // which setting are we changing or highlighting 
-const uint8_t NUMBER_SETTINGS=2;
+const uint8_t NUMBER_SETTINGS=2; // Number of values which can be set
 
 //this controls the menu backend and the event generation
 MenuBackend menu = MenuBackend(menuEventUse,menuEventChange);
@@ -128,21 +130,59 @@ void menuEventChange(MenuChangeEvent changed)
 void display_temp_menu(float current, float target) {
     lcd.setCursor(0,1);
     lcd.print("Current Temp = ");
-    lcd.setCursor(15,1);
     lcd.print(current,2);
     
     lcd.setCursor(0,2);
-    lcd.print("Target Temp =");
-    lcd.setCursor(15,2);
+    lcd.print("Target Temp  = ");
     lcd.print(target,2);
 
-    lcd.setCursor(9,3);
+    lcd.setCursor(7,3);
 
-    if((liquor_preheat && display==PREHEAT)||(herms_recirc && display==MASH)) {
-        lcd.print("ON ");
+    if(liquor_preheat && display==PREHEAT) {
+        lcd.print("  ON  ");
+    } else if (herms_recirc && display==MASH){
+        display_mash_timer();
     } else {
-        lcd.print("OFF");
+        lcd.print("  OFF  ");
     }
+}
+
+void display_mash_timer()
+{
+  uint8_t mins = mash_mins();
+  uint8_t secs = mash_secs();
+  
+  if (mins>99)
+    lcd.setCursor(7,3);
+  else if (mins>9)
+    lcd.setCursor(8,3);
+  else
+    lcd.setCursor(9,3);
+    
+  lcd.print(mins);
+  lcd.print(":");
+  
+  if (secs<10)
+    lcd.print("0");
+    
+  lcd.print(secs);
+}
+
+uint8_t mash_mins() {
+  unsigned long current_time = millis();
+  
+  return ((current_time-mash_start_time)/60000);
+}
+
+uint8_t mash_secs() {
+  unsigned long current_time = millis();
+  unsigned long elapsed_secs = ((current_time-mash_start_time)/1000);
+  
+  //Serial.print("Start : "); Serial.println(mash_start_time);
+  //Serial.print("Current : "); Serial.println(current_time);
+  Serial.print("Secs : "); Serial.println(elapsed_secs);
+  
+  return (elapsed_secs%60);
 }
 
 void display_settings() {
@@ -151,15 +191,15 @@ void display_settings() {
   
   lcdClearRow(1);
   lcd.setCursor(0,1);
-  lcd.print("HLT target = ");
+  lcd.print("HLT target =   ");
   lcd.print(Strike_temp);
   
   lcdClearRow(2);
   lcd.setCursor(0,2);
-  lcd.print("Mash temp  = ");
+  lcd.print("Mash temp  =   ");
   lcd.print(Mash_target);
   
-  lcd.setCursor(13,current_setting+1);
+  lcd.setCursor(14,current_setting+1);
   
   if (change_setting)
     lcd.blink();
@@ -213,8 +253,8 @@ void display_root()
   lcdClearRow(1);
   lcdClearRow(2);
   
-  lcd.setCursor(1,1);
-  lcd.println("Brew Controller");
+  lcd.setCursor(2,1);
+  lcd.print("Brew Controller");
   lcd.setCursor(9,2);
   lcd.print(VERSION);
 }
@@ -431,6 +471,10 @@ void toggle_HERMS_Heater()
     Serial.print("Toggle Herms: ");
     Serial.println(HERMS_heater_ON);
     digitalWrite(HERMS_HEATER,HERMS_heater_ON ? HIGH : LOW);
+    
+    if (HERMS_heater_ON) {
+      mash_start_time = millis();
+    }
 }
 
 void updateDisplay ()
@@ -438,6 +482,13 @@ void updateDisplay ()
   lcd.setCursor(0,3);
   lcd.print("<");
   lcd.print(prev_item);
+  
+  if (menu.getCurrent() == settings || menu.getCurrent() == root )
+  {
+    lcd.setCursor(5,3);
+    lcd.print("          ");
+  }
+  
   lcd.setCursor(15,3);
   lcd.print(next_item);
   lcd.print(">");
@@ -487,6 +538,10 @@ void loop() {
       if (display_refresh) {
         updateDisplay();
       } 
+      
+      if(herms_recirc && display==MASH) {
+        display_mash_timer();
+      }
   }
 
 }
