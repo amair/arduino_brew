@@ -10,11 +10,14 @@
 #include <MenuBackend.h>
 #include <PID_v1.h>
 
-const char VERSION[6] ="0.7";
+const char VERSION[6] ="0.75";
+
+const boolean serial_output_temp = false;
 
 // This defines the addresses of the 2Wire devices in use so we can identify them
-#define NUM_PROBES 2
-const byte PROBE[NUM_PROBES][8] = {{0x28, 0xE8, 0xE9, 0x18, 0x04, 0x00, 0x00, 0x05},{0x28, 0x1A, 0xCE, 0x0C, 0x04, 0x00, 0x00, 0x86}};
+#define NUM_PROBES 3
+const byte PROBE[NUM_PROBES][8] = {{0x28, 0xE8, 0xE9, 0x18, 0x04, 0x00, 0x00, 0x05},{0x28, 0xF3, 0xDC, 0x0C, 0x04, 0x00, 0x00, 0xC6},{0x28, 0x1A, 0xCE, 0x0C, 0x04, 0x00, 0x00, 0x86}};
+
 const bool parasitic_mode = false; // Define if we are using parasitic power or not
 
 Adafruit_RGBLCDShield lcd;
@@ -28,13 +31,14 @@ OneWire  ds(7);  // One wire thermometers on pin 7
 const uint8_t HLT_HEATER_1=12; // Heater coil 1 in HLT
 const uint8_t HLT_HEATER_2=11; // Heater coil 2 in HLT
 const uint8_t HERMS_HEATER=10; // Heater coil in HERMS recirculator
+const uint8_t ATX_POWER=4; //Controls whether the ATX power supply is active
 
 //PID Settings
-const int PIDWindowSize = 5000;
+const int PIDWindowSize = 50;
 int mash_pid_window = 0;
 //Define Variables we'll be connecting to
-double Strike_temp=80.0; //Target temperature for HLT water
-double Mash_target=19.0;//65.5; // Target mash temp inside mash tun
+double Strike_temp=87.0; //Target temperature for HLT water
+double Mash_target=65.5; // Target mash temp inside mash tun
 double HLT_temp; 
 double HERMS_out_temp;
 double mash_temp; // in Celsius as this is default for DS1820
@@ -44,7 +48,7 @@ double pid_ki = 5;
 double pid_kp = 2;
 
 //Specify the links and initial tuning parameters
-PID mashPID(&HERMS_out_temp, &mash_pid_output, &Mash_target,kp,ki,kd, DIRECT);
+PID mashPID(&HERMS_out_temp, &mash_pid_output, &Mash_target,pid_kd,pid_ki,pid_kd, DIRECT);
 
 
 enum DISPLAY_SCREEN{ROOT, PREHEAT, MASH, SETTINGS};  // Each screen must be defined here
@@ -55,6 +59,7 @@ boolean liquor_preheat = false; // Are we in preheat mode for the HLT
 boolean herms_recirc = false; // Are we running the HERMS recirculation
 
 boolean HLT_heater_ON=false; //True when the HLT heater(s) are on
+boolean herms_active = false; // Track whether the herms heater is ON
 
 unsigned long mash_start_time = 0; // Number of seconds when mash started
 
@@ -231,13 +236,17 @@ void setup() {
   pinMode(HLT_HEATER_1, OUTPUT);
   pinMode(HLT_HEATER_2, OUTPUT);
   pinMode(HERMS_HEATER, OUTPUT);
+  pinMode(ATX_POWER, OUTPUT);
+  
+  digitalWrite(HLT_HEATER_1, LOW);
+  digitalWrite(HLT_HEATER_2, LOW);
+  digitalWrite(HERMS_HEATER, LOW);
+  digitalWrite(ATX_POWER, HIGH);
 
   // initialise the LCD
   lcd = Adafruit_RGBLCDShield();
   // set up the LCD's number of columns and rows:
   lcd.begin(20, 4);
-
-  windowStartTime = millis();
 
   //Catch the external interrupt from the button input
   attachInterrupt(1,Button_Pressed,FALLING);
@@ -252,7 +261,7 @@ void setup() {
   }
   
   //tell the PID to range between 0 and the full window size
-  mashPID.SetOutputLimits(0, WindowSize);
+  mashPID.SetOutputLimits(0, PIDWindowSize);
 
   //turn the PID on
   mashPID.SetMode(AUTOMATIC);
@@ -362,6 +371,7 @@ unsigned char identifyProbe (byte * addr)
       if (i==7) {found_probe = probe;} // If we got this far then we have a match
     }
   }
+
     return found_probe;
 }
 
@@ -377,8 +387,10 @@ void updateTemperatures()
 
     if (OneWire::crc8(addr, 7) == addr[7]) {
       probe = identifyProbe(addr);
-
-      //Serial.print("Probe:"); Serial.print(probe); Serial.print(" ");
+      
+      if (serial_output_temp) {
+        Serial.print("Probe:"); Serial.print(probe); Serial.print(" ");
+      }
 
       ds.reset();
       ds.select(addr);
@@ -420,18 +432,24 @@ void updateTemperatures()
         // default is 12 bit resolution, 750 ms conversion time
 
         celsius = (float)raw / 16.0;
-//        Serial.print("  Temperature = ");
-//        Serial.print(celsius);
-//        Serial.println(" Celsius, ");
+        
+        if (serial_output_temp) {
+          Serial.print("  Temperature = ");
+          Serial.print(celsius);
+          Serial.println(" Celsius, ");
+        }
 
         switch(probe) {
           case 0:
             if (celsius!=HLT_temp && display==PREHEAT) display_refresh=true;
             HLT_temp = celsius; break;
           case 1:
-            if (celsius!=HERMS_out_temp && display==MASH) display_refresh=true;
             HERMS_out_temp = celsius; 
+            if (celsius!=HERMS_out_temp && display==MASH) {
+              display_refresh=true;
+            }
             mashPID.Compute();
+            serial_mash_output();
             break;
           case 2:
             if (celsius!=mash_temp && display==MASH) display_refresh=true;
@@ -468,13 +486,28 @@ void cycle_HERMS()
   
   if (mash_pid_window > PIDWindowSize) mash_pid_window = 0;
   
-    if(mash_pid_output > mash_pid_window) 
+    if(mash_pid_output > mash_pid_window) {
+      if (HLT_heater_ON) {
+        //Disable 2nd boil element to prevent overload
+        digitalWrite (HLT_HEATER_2, LOW);
+      }
+      herms_active=true;
+      digitalWrite(ATX_POWER, LOW);
       digitalWrite(HERMS_HEATER,HIGH);
-    else 
+    } else { 
       digitalWrite(HERMS_HEATER,LOW);
+      digitalWrite(ATX_POWER, HIGH);
+      herms_active=false;
+      if (HLT_heater_ON) {
+         //Re-enable 2nd boil element in case it was disabled
+        digitalWrite (HLT_HEATER_2, HIGH);     
+      }
+    }
     
+    output("PID Window", mash_pid_window);
     output("PID out", mash_pid_output);
 }
+
 
 void output(const char * title, double value)
 {
@@ -487,7 +520,9 @@ void toggle_HLT_Heater()
     Serial.print("Toggle HLT: ");
     Serial.println(HLT_heater_ON);
     digitalWrite(HLT_HEATER_1, HLT_heater_ON ? HIGH : LOW );
-    digitalWrite(HLT_HEATER_2, HLT_heater_ON ? HIGH : LOW);
+    if (!herms_active) {
+      digitalWrite(HLT_HEATER_2, HLT_heater_ON ? HIGH : LOW);
+    }
 }
 
 void updateDisplay ()
@@ -524,6 +559,20 @@ void updateDisplay ()
  display_refresh=false;
 }
 
+void serial_mash_output() {
+  Serial.print("Time :" );
+  Serial.println(millis()-mash_start_time);
+  
+  Serial.print("Temp : ");
+  Serial.println(HERMS_out_temp);
+  
+  Serial.print("Target : ");
+  Serial.println(Mash_target);
+  
+  Serial.println("");
+}
+
+
 void loop() {
 
   if (buttonPress) {
@@ -555,7 +604,7 @@ void loop() {
       if(herms_recirc && display==MASH) {
         display_mash_timer();
       }
-  }
+  }    
 
 }
 
