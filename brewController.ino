@@ -1,5 +1,5 @@
 /*********************
-
+NB This requires Arduino 1.0.2 or later for the Interrupt PIN to work on Leonardo
 **********************/
 
 // include the library code:
@@ -23,8 +23,8 @@ const bool parasitic_mode = false; // Define if we are using parasitic power or 
 Adafruit_RGBLCDShield lcd;
 // RGB Shield needs 5 wires
 // VSS and VDD
-// i2c clock and data connect to A4 and A5 on Arduino
-// i2c interrupt connects to digital pin 3 on arduino
+// i2c clock and data connect to A4 and A5 on Duo, Pin 2&3 on Leonardo
+// i2c interrupt connects to digital pin 3 on Duo, pin 1 on Leonardo
 
 //Arduino pins
 OneWire  ds(7);  // One wire thermometers on pin 7
@@ -249,14 +249,15 @@ void setup() {
   lcd.begin(20, 4);
 
   //Catch the external interrupt from the button input
-  attachInterrupt(1,Button_Pressed,FALLING);
+  // 1 for Pin3 on Duo, 2 for Pin0 on Leonardo
+  attachInterrupt(2,Button_Pressed,FALLING);
   //This signal is active low, so HIGH-to-LOW when interrupt
 
   //Tell the MCP23017 to start making interrupts
   lcd.enableButtonInterrupt();
 
   //Clear the interrupt if it was present
-  while (!digitalRead(3)) {
+  while (!digitalRead(0)) {
     lcd.readButtons();
   }
   
