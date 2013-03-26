@@ -10,13 +10,16 @@ NB This requires Arduino 1.0.2 or later for the Interrupt PIN to work on Leonard
 #include <MenuBackend.h>
 #include <PID_v1.h>
 
-const char VERSION[6] ="0.75";
+const char VERSION[6] ="0.81";
 
 const boolean serial_output_temp = false;
+const boolean mash_output_as_csv=true;
 
 // This defines the addresses of the 2Wire devices in use so we can identify them
-#define NUM_PROBES 3
-const byte PROBE[NUM_PROBES][8] = {{0x28, 0xE8, 0xE9, 0x18, 0x04, 0x00, 0x00, 0x05},{0x28, 0xF3, 0xDC, 0x0C, 0x04, 0x00, 0x00, 0xC6},{0x28, 0x1A, 0xCE, 0x0C, 0x04, 0x00, 0x00, 0x86}};
+#define NUM_PROBES 4
+
+//Chinese Probe 
+const byte PROBE[NUM_PROBES][8] = {{0x28, 0xE8, 0xE9, 0x18, 0x04, 0x00, 0x00, 0x05},{0x28, 0xF3, 0xDC, 0x0C, 0x04, 0x00, 0x00, 0xC6},{0x28, 0x1A, 0xCE, 0x0C, 0x04, 0x00, 0x00, 0x86},{0x28, 0x50, 0xDE, 0x71, 0x04, 0x00, 0x00, 0x75}};
 
 const bool parasitic_mode = false; // Define if we are using parasitic power or not
 
@@ -34,24 +37,28 @@ const uint8_t HERMS_HEATER=10; // Heater coil in HERMS recirculator
 const uint8_t ATX_POWER=4; //Controls whether the ATX power supply is active
 
 //PID Settings
-const int PIDWindowSize = 50;
+const int PIDWindowSize = 10;
 int mash_pid_window = 0;
 //Define Variables we'll be connecting to
 double Strike_temp=87.0; //Target temperature for HLT water
 double Mash_target=65.5; // Target mash temp inside mash tun
 double HLT_temp; 
 double HERMS_out_temp;
-double mash_temp; // in Celsius as this is default for DS1820
-double mash_pid_output;
+double mash_temp, mash_temp2; // in Celsius as this is default for DS1820
+double mash_pid_output; // Hardwire at 50% for test
+//Direct Kettle values
+//double pid_kd = 1;
+//double pid_ki = 0.25;
+//double pid_kp = 0.25;
+// HERMS Setup
 double pid_kd = 1;
-double pid_ki = 5;
-double pid_kp = 2;
+double pid_ki = 1;
+double pid_kp = 100;
 
 //Specify the links and initial tuning parameters
 PID mashPID(&HERMS_out_temp, &mash_pid_output, &Mash_target,pid_kd,pid_ki,pid_kd, DIRECT);
 
-
-enum DISPLAY_SCREEN{ROOT, PREHEAT, MASH, SETTINGS};  // Each screen must be defined here
+enum DISPLAY_SCREEN{ROOT, PREHEAT, MASH, TEMP, SETTINGS};  // Each screen must be defined here
 
 volatile boolean buttonPress=false;// Indicates if we have received an
                                    // Interupt to tell us a button needs read
@@ -75,6 +82,7 @@ MenuBackend menu = MenuBackend(menuEventUse,menuEventChange);
 MenuItem root = MenuItem("Root");
 MenuItem preheat_liquor = MenuItem("Preheat");
 MenuItem mash = MenuItem("Mash");
+MenuItem temperatures = MenuItem("Temp");
 MenuItem settings = MenuItem("Settings");
 char prev_item[5];
 char next_item[5];
@@ -88,7 +96,8 @@ void menuSetup()
   //root.addLeft(settings);
   preheat_liquor.addRight(mash);
   //preheat_liquor.addLeft(root);
-  mash.addRight(settings);
+  mash.addRight(temperatures);
+  temperatures.addRight(settings);
   //mash.addLeft(preheat_liquor);
   settings.addRight(root);
 }
@@ -132,6 +141,8 @@ void menuEventChange(MenuChangeEvent changed)
     display=MASH;
   } else if (changed.to==root) {
     display=ROOT;
+  } else if (changed.to==temperatures){
+    display=TEMP;
   } else if (changed.to==settings){
     display=SETTINGS;
   }
@@ -220,6 +231,26 @@ void display_settings() {
     lcd.cursor();
 }
 
+void display_all_temperatures() {
+  lcdClearRow(1);
+  lcd.setCursor(0,1);
+  lcd.print("T1= ");
+  lcd.print(HLT_temp);
+  
+  lcd.setCursor(10,1);
+  lcd.print("T2= ");
+  lcd.print(HERMS_out_temp);
+  
+  lcdClearRow(2);
+  lcd.setCursor(0,2);
+  lcd.print("T3= ");
+  lcd.print(mash_temp);
+  
+  lcd.setCursor(10,2);
+  lcd.print("T4= ");
+  lcd.print(mash_temp2);
+}
+
 void Button_Pressed() {
   // Keep this as short as possible - because you are holding up the proc
   // So we will handle this by just marking that an interrupt has happened,
@@ -231,6 +262,8 @@ void Button_Pressed() {
 void setup() {
   // Debugging output
   Serial.begin(9600);
+  
+  output("Beginning setup",0);
 
   //Setup the pins
   pinMode(HLT_HEATER_1, OUTPUT);
@@ -268,6 +301,8 @@ void setup() {
   mashPID.SetMode(AUTOMATIC);
 
   menuSetup();
+  
+  output("Setup Complete",0);
 }
 
 void display_root()
@@ -351,6 +386,8 @@ void toggle_preheat_liquor()
 void toggle_herms_recirc()
 {
   herms_recirc=!herms_recirc;
+  digitalWrite(ATX_POWER, herms_recirc ? LOW : HIGH);
+
   Serial.println("Toggle HERMS mode");
   
   if (herms_recirc) mash_start_time = millis();
@@ -368,6 +405,7 @@ unsigned char identifyProbe (byte * addr)
 
   for (probe=0; probe < NUM_PROBES & found_probe==255; probe++) {
     for( i = 0; i < 8; i++) {
+      //Serial.println(addr[i]);
       if (addr[i] != PROBE[probe][i])  {break;} // It's not this probe so bail
       if (i==7) {found_probe = probe;} // If we got this far then we have a match
     }
@@ -383,8 +421,10 @@ void updateTemperatures()
   byte data[12];
   byte addr[8];
   float celsius;
-
+  byte num_probes_found = 0;
+    
   while ( ds.search(addr)) {
+    num_probes_found++;
 
     if (OneWire::crc8(addr, 7) == addr[7]) {
       probe = identifyProbe(addr);
@@ -442,21 +482,23 @@ void updateTemperatures()
 
         switch(probe) {
           case 0:
-            if (celsius!=HLT_temp && display==PREHEAT) display_refresh=true;
+            if (celsius!=HLT_temp && (display==PREHEAT || display==TEMP)) display_refresh=true;
             HLT_temp = celsius; break;
           case 1:
+            if (celsius!=HERMS_out_temp && (display==MASH || display==TEMP)) display_refresh=true;
             HERMS_out_temp = celsius; 
-            if (celsius!=HERMS_out_temp && display==MASH) {
-              display_refresh=true;
-            }
             mashPID.Compute();
             serial_mash_output();
             break;
           case 2:
-            if (celsius!=mash_temp && display==MASH) display_refresh=true;
+            if (celsius!=mash_temp && (display==MASH|| display==TEMP)) display_refresh=true;
             mash_temp = celsius; 
             break;
-        }
+          case 3:
+            if (celsius!=mash_temp2 && (display==MASH|| display==TEMP)) display_refresh=true;
+            mash_temp2 = celsius; 
+            break;        
+          }
 
       } else {
        Serial.println("CRC mismatch - ignoring reading");
@@ -468,7 +510,9 @@ void updateTemperatures()
   }
 
   ds.reset_search();
-
+  if (serial_output_temp){
+    output("Found probes",num_probes_found);  
+  }
 }
 
 void cycle_HLT()
@@ -493,11 +537,9 @@ void cycle_HERMS()
         digitalWrite (HLT_HEATER_2, LOW);
       }
       herms_active=true;
-      digitalWrite(ATX_POWER, LOW);
       digitalWrite(HERMS_HEATER,HIGH);
     } else { 
       digitalWrite(HERMS_HEATER,LOW);
-      digitalWrite(ATX_POWER, HIGH);
       herms_active=false;
       if (HLT_heater_ON) {
          //Re-enable 2nd boil element in case it was disabled
@@ -505,8 +547,10 @@ void cycle_HERMS()
       }
     }
     
-    output("PID Window", mash_pid_window);
-    output("PID out", mash_pid_output);
+    if (!mash_output_as_csv){ 
+      output("PID Window", mash_pid_window);
+      output("PID out", mash_pid_output);
+    }
 }
 
 
@@ -552,6 +596,9 @@ void updateDisplay ()
     case MASH:
        display_temp_menu(HERMS_out_temp, Mash_target);
     break;
+    case TEMP:
+      display_all_temperatures();
+    break;
     case SETTINGS:
       display_settings();
     break;
@@ -561,16 +608,26 @@ void updateDisplay ()
 }
 
 void serial_mash_output() {
-  Serial.print("Time :" );
-  Serial.println(millis()-mash_start_time);
+  double time=(millis()-mash_start_time);
+  time=time/1000;
   
-  Serial.print("Temp : ");
-  Serial.println(HERMS_out_temp);
-  
-  Serial.print("Target : ");
-  Serial.println(Mash_target);
-  
-  Serial.println("");
+  if (mash_output_as_csv)
+  {
+    Serial.print(time);
+    Serial.print(",");
+    Serial.println(HERMS_out_temp);
+  } else {
+    Serial.print("Time :" );
+    Serial.println(time);
+    
+    Serial.print("Temp : ");
+    Serial.println(HERMS_out_temp);
+    
+    Serial.print("Target : ");
+    Serial.println(Mash_target);
+    
+    Serial.println("");
+  }
 }
 
 
