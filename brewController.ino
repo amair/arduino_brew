@@ -53,7 +53,7 @@ double mash_pid_output; // Hardwire at 50% for test
 // HERMS Setup
 double pid_kd = 1;
 double pid_ki = 1;
-double pid_kp = 100;
+double pid_kp = 20;
 
 //Specify the links and initial tuning parameters
 PID mashPID(&HERMS_out_temp, &mash_pid_output, &Mash_target,pid_kd,pid_ki,pid_kd, DIRECT);
